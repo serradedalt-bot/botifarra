@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Comptador Botifarra</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; font-family:-apple-system,Roboto,sans-serif; background:#0d3b1e; color:#fff; overscroll-behavior:none; }
+  body { display:flex; flex-direction:column; user-select:none; }
+
+  header { text-align:center; padding:10px 8px 6px; }
+  header h1 { font-size:20px; letter-spacing:1px; color:#f5d76e; }
+  .objectiu { font-size:13px; opacity:.8; margin-top:2px; }
+
+  .marcador { display:flex; flex:0 0 auto; gap:8px; padding:8px; }
+  .equip {
+    flex:1; border-radius:14px; padding:12px 8px; text-align:center;
+    background:linear-gradient(160deg,#1a6b3c,#0e4526); position:relative;
+  }
+  .equip.win { box-shadow:0 0 0 3px #f5d76e inset; }
+  .equip .nom { font-size:15px; font-weight:600; padding:2px 4px; }
+  .equip .nom[contenteditable] { outline:none; border-bottom:1px dashed rgba(255,255,255,.3); }
+  .equip .total { font-size:56px; font-weight:800; line-height:1.05; color:#f5d76e; }
+  .equip .cames { font-size:12px; opacity:.75; margin-top:2px; min-height:16px; }
+
+  .ronda { flex:1 1 auto; overflow-y:auto; padding:4px 10px; }
+  .ronda h2 { font-size:13px; opacity:.7; margin:6px 0 4px; }
+  .quick { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .quick button {
+    flex:1 1 28%; background:#0a2e17; color:#fff; border:1px solid #2a6b45;
+    border-radius:10px; padding:10px 4px; font-size:15px; font-weight:600;
+  }
+  .quick button:active { background:#f5d76e; color:#0d3b1e; }
+
+  .manual { display:flex; gap:8px; margin-bottom:8px; align-items:stretch; }
+  .manual button {
+    flex:0 0 56px; font-size:26px; font-weight:800; background:#0a2e17;
+    color:#f5d76e; border:1px solid #2a6b45; border-radius:10px;
+  }
+  .manual button:active { background:#f5d76e; color:#0d3b1e; }
+  .manual input {
+    flex:1; text-align:center; font-size:32px; font-weight:800;
+    background:#0a2e17; color:#f5d76e; border:1px solid #2a6b45;
+    border-radius:10px; min-width:0;
+  }
+  .manual input:focus { outline:2px solid #f5d76e; }
+
+  .assign { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .assign .lbl { font-size:13px; opacity:.8; flex:0 0 auto; }
+  .assign .segmented { display:flex; flex:1; gap:6px; }
+  .assign .segmented button {
+    flex:1; padding:12px 4px; border-radius:10px; border:1px solid #2a6b45;
+    background:#0a2e17; color:#fff; font-size:14px; font-weight:600;
+  }
+  .assign .segmented button.sel { background:#f5d76e; color:#0d3b1e; }
+
+  .btns { display:flex; gap:8px; padding:8px 10px; }
+  .btns button {
+    flex:1; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:700;
+  }
+  .btns .add { background:#f5d76e; color:#0d3b1e; }
+  .btns .undo { background:#333; color:#fff; flex:0 0 auto; padding:14px 18px; }
+  .btns .reset { background:#7a2222; color:#fff; flex:0 0 auto; padding:14px 18px; }
+
+  .historial { padding:0 10px 10px; }
+  .historial h2 { font-size:13px; opacity:.7; margin:6px 0 4px; }
+  .hlist { font-size:13px; opacity:.85; }
+  .hlist div { padding:3px 0; border-bottom:1px solid rgba(255,255,255,.08); display:flex; justify-content:space-between; }
+
+  dialog { border:none; border-radius:14px; padding:22px; background:#144a28; color:#fff; text-align:center; max-width:80%; }
+  dialog h3 { color:#f5d76e; font-size:22px; margin-bottom:12px; }
+  dialog button { margin-top:14px; background:#f5d76e; color:#0d3b1e; border:none; padding:12px 24px; border-radius:10px; font-weight:700; }
+  dialog::backdrop { background:rgba(0,0,0,.6); }
+</style>
+</head>
+<body>
+<header>
+  <h1>BOTIFARRA</h1>
+  <div class="objectiu">Objectiu: <span id="objVal">101</span> punts · <button id="objBtn" style="background:none;border:1px solid #2a6b45;color:#f5d76e;border-radius:8px;padding:2px 8px;font-size:12px;">canviar</button></div>
+</header>
+
+<div class="marcador">
+  <div class="equip" id="eq0">
+    <div class="nom" contenteditable="true">Nosaltres</div>
+    <div class="total" id="t0">0</div>
+    <div class="cames" id="c0"></div>
+  </div>
+  <div class="equip" id="eq1">
+    <div class="nom" contenteditable="true">Ells</div>
+    <div class="total" id="t1">0</div>
+    <div class="cames" id="c1"></div>
+  </div>
+</div>
+
+<div class="ronda">
+  <h2>Punts d'aquesta mà</h2>
+  <div class="manual">
+    <button id="minus">−</button>
+    <input id="baseInput" type="number" inputmode="numeric" pattern="[0-9]*" value="0" min="0">
+    <button id="plus">+</button>
+  </div>
+  <div class="quick">
+    <button data-p="36">36 (mitja)</button>
+    <button data-p="72">72 (capot)</button>
+    <button data-p="0">Esborra</button>
+  </div>
+
+  <div class="assign">
+    <span class="lbl">Guanya:</span>
+    <div class="segmented">
+      <button data-g="0" class="sel" id="g0">Nosaltres</button>
+      <button data-g="1" id="g1">Ells</button>
+    </div>
+  </div>
+
+  <div class="assign">
+    <span class="lbl">Multiplicador:</span>
+    <div class="segmented">
+      <button data-m="1" class="sel">×1</button>
+      <button data-m="2">×2 (contro)</button>
+      <button data-m="4">×4 (recontro)</button>
+      <button data-m="8">×8</button>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:14px;opacity:.9;margin-bottom:4px;">
+    A sumar: <b id="preview" style="color:#f5d76e;">0</b> punts
+  </div>
+</div>
+
+<div class="btns">
+  <button class="undo" id="undo">↶</button>
+  <button class="add" id="add">SUMAR MÀ</button>
+  <button class="reset" id="reset">↺</button>
+</div>
+
+<div class="historial">
+  <h2>Historial</h2>
+  <div class="hlist" id="hlist"></div>
+</div>
+
+<dialog id="winDlg">
+  <h3 id="winTxt"></h3>
+  <button id="winClose">Nova partida</button>
+</dialog>
+
+<script>
+let state = { t:[0,0], obj:101, base:0, guanya:0, mult:1, hist:[] };
+
+const $ = id => document.getElementById(id);
+
+function preview(){ return state.base * state.mult; }
+function render(){
+  $('t0').textContent = state.t[0];
+  $('t1').textContent = state.t[1];
+  $('objVal').textContent = state.obj;
+  $('preview').textContent = preview();
+  $('eq0').classList.toggle('win', state.t[0]>=state.obj);
+  $('eq1').classList.toggle('win', state.t[1]>=state.obj);
+  const h = $('hlist'); h.innerHTML='';
+  state.hist.slice().reverse().forEach(r=>{
+    const d=document.createElement('div');
+    d.innerHTML=`<span>${r.txt}</span><span>${state.getName?'':''}${r.a} - ${r.b}</span>`;
+    h.appendChild(d);
+  });
+}
+
+// entrada manual
+const baseInput = $('baseInput');
+baseInput.oninput=()=>{ state.base = Math.max(0, parseInt(baseInput.value)||0); $('preview').textContent = preview(); };
+$('plus').onclick=()=>{ state.base = (state.base||0)+1; baseInput.value=state.base; render(); };
+$('minus').onclick=()=>{ state.base = Math.max(0,(state.base||0)-1); baseInput.value=state.base; render(); };
+// botons ràpids
+document.querySelectorAll('.quick button').forEach(b=>{
+  b.onclick=()=>{ state.base = +b.dataset.p; baseInput.value=state.base; render(); };
+});
+// guanyador
+[$('g0'),$('g1')].forEach(b=>{
+  b.onclick=()=>{ state.guanya=+b.dataset.g; $('g0').classList.toggle('sel',state.guanya===0); $('g1').classList.toggle('sel',state.guanya===1); };
+});
+// multiplicador
+document.querySelectorAll('[data-m]').forEach(b=>{
+  b.onclick=()=>{ state.mult=+b.dataset.m; document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('sel',x===b)); render(); };
+});
+
+$('add').onclick=()=>{
+  const pts=preview();
+  if(pts<=0){ return; }
+  state.t[state.guanya]+=pts;
+  const n0=document.querySelectorAll('.nom')[0].textContent;
+  const n1=document.querySelectorAll('.nom')[1].textContent;
+  state.hist.push({txt:`${state.guanya===0?n0:n1} +${pts}`, a:state.t[0], b:state.t[1], pts, who:state.guanya});
+  state.base=0;
+  baseInput.value=0;
+  render();
+  const w = state.t[0]>=state.obj || state.t[1]>=state.obj;
+  if(w){
+    const winner = state.t[0]>state.t[1]?n0:n1;
+    $('winTxt').textContent = `🏆 ${winner} guanya!`;
+    $('winDlg').showModal();
+  }
+};
+
+$('undo').onclick=()=>{
+  const last=state.hist.pop();
+  if(last){ state.t[last.who]-=last.pts; render(); }
+};
+
+$('reset').onclick=()=>{
+  if(confirm('Reiniciar la partida?')){ state.t=[0,0]; state.hist=[]; state.base=0; baseInput.value=0; render(); }
+};
+
+$('objBtn').onclick=()=>{
+  const v=prompt('Punts per guanyar:', state.obj);
+  const n=parseInt(v);
+  if(n>0){ state.obj=n; render(); }
+};
+
+$('winClose').onclick=()=>{
+  $('winDlg').close();
+  state.t=[0,0]; state.hist=[]; state.base=0; baseInput.value=0; render();
+};
+
+render();
+</script>
+</body>
+</html>
